@@ -1,4 +1,4 @@
-import type { CodiffDiffStyle } from './config/types.ts';
+import type { CodiffAgentBackend, CodiffAgentConfigs, CodiffDiffStyle } from './config/types.ts';
 
 export type DiffSection = {
   binary: boolean;
@@ -153,9 +153,10 @@ export type WalkthroughContext = {
 };
 
 export type CodiffLaunchOptions = {
-  agentBackend?: 'codex' | 'claude';
+  agentBackend?: CodiffAgentBackend;
   claudeSessionId?: string;
   codexSessionId?: string;
+  opencodeSessionId?: string;
   repositoryPathProvided: boolean;
   source?: ReviewSource;
   walkthrough: boolean;
@@ -205,7 +206,7 @@ export type WalkthroughResult =
       walkthrough: Walkthrough;
     }
   | {
-      code?: 'CODEX_NOT_FOUND' | 'CLAUDE_NOT_FOUND';
+      code?: 'CODEX_NOT_FOUND' | 'CLAUDE_NOT_FOUND' | 'OPENCODE_NOT_FOUND';
       reason: string;
       status: 'unavailable';
     };
@@ -237,7 +238,7 @@ export type ReviewAssistantResult =
       status: 'ready';
     }
   | {
-      code?: 'CODEX_NOT_FOUND' | 'CLAUDE_NOT_FOUND';
+      code?: 'CODEX_NOT_FOUND' | 'CLAUDE_NOT_FOUND' | 'OPENCODE_NOT_FOUND';
       reason: string;
       status: 'unavailable';
     };
@@ -282,13 +283,12 @@ export type DiffImageContentResult =
 export type CodiffTheme = 'system' | 'light' | 'dark';
 
 export type CodiffPreferences = {
-  agentBackend: 'codex' | 'claude';
-  claudeModel: string;
+  agentBackend: CodiffAgentBackend;
+  agents: CodiffAgentConfigs;
   copyCommentsOnClose: boolean;
   diffStyle: CodiffDiffStyle;
   editorCommand: string;
   lastRepositoryPath: string;
-  openAIModel: string;
   showOutdated: boolean;
   showWhitespace: boolean;
   theme: CodiffTheme;

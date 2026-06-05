@@ -7,7 +7,7 @@ Codiff is a beautiful, minimal, local diff viewer for reviewing staged and unsta
 ## Why Codiff
 
 - **Fast Local Reviews:** See changes in any Git repository to review code before committing.
-- **LLM Walkthroughs:** Run `codiff -w` to ask Codex or Claude Code to give you a review order and more context.
+- **LLM Walkthroughs:** Run `codiff -w` to ask Codex, Claude Code, or OpenCode to give you a review order and more context.
 - **Inline Review Comments:** Comment directly on changed lines and copy all review comments as Markdown for follow-ups.
 
 ## Download
@@ -87,12 +87,24 @@ is running so changes apply to open windows.
   "$schema": "https://raw.githubusercontent.com/nkzw-tech/codiff/main/src/config/codiff-config.schema.json",
   "settings": {
     "agentBackend": "codex",
-    "claudeModel": "claude-sonnet-4-6",
+    "agents": {
+      "codex": {
+        "model": "gpt-5.3-codex-spark",
+        "fallbackModel": "gpt-5.3-codex",
+      },
+      "claude": {
+        "model": "claude-sonnet-4-6",
+        "fallbackModel": "claude-haiku-4-5",
+      },
+      "opencode": {
+        "model": "opencode-go/deepseek-v4-flash",
+        "fallbackModel": "default",
+      },
+    },
     "copyCommentsOnClose": false,
     "diffStyle": "split",
     "editorCommand": "",
     "lastRepositoryPath": "",
-    "openAIModel": "gpt-5.3-codex-spark",
     "showWhitespace": false,
     "theme": "system",
     "wordWrap": false,
@@ -125,18 +137,22 @@ combine `Mod`, `Ctrl`, `Alt`, `Shift`, or `Meta` with a key, for example `Mod+Sh
 
 ## Walkthroughs
 
-Codiff uses a local agent CLI for walkthroughs and inline review assistance. It supports two
+Codiff uses a local agent CLI for walkthroughs and inline review assistance. It supports three
 backends, selected with the `settings.agentBackend` config value (or the `--agent` flag for a
 single launch) and the `Agent` application menu:
 
-- `codex` (default) — the OpenAI Codex CLI, configured with `settings.openAIModel`.
-- `claude` — the [Claude Code](https://claude.com/claude-code) CLI, configured with `settings.claudeModel`.
+- `codex` (default) — the OpenAI Codex CLI, configured with `settings.agents.codex.model`.
+- `claude` — the [Claude Code](https://claude.com/claude-code) CLI, configured with `settings.agents.claude.model`.
+- `opencode` — the [OpenCode](https://opencode.ai) CLI, configured with `settings.agents.opencode.model`
+  (defaults to `opencode-go/deepseek-v4-flash`; override with any `provider/model` string that
+  matches your OpenCode provider configuration).
 
 Install the backend you want and verify it is available before using `codiff -w`:
 
 ```bash
 codex --version
 claude --version
+opencode --version
 ```
 
 Codiff looks for the CLI on `PATH` and the usual install locations. It does not run your shell
@@ -146,24 +162,30 @@ explicit path:
 ```bash
 CODIFF_CODEX_PATH=/absolute/path/to/codex codiff -w
 CODIFF_CLAUDE_PATH=/absolute/path/to/claude codiff --agent claude -w
+CODIFF_OPENCODE_PATH=/absolute/path/to/opencode codiff --agent opencode -w
 ```
 
 Claude Code rides your existing `claude` login (subscription or `ANTHROPIC_API_KEY`); run `claude`
-once and complete `/login` if you have not already.
+once and complete `/login` if you have not already. OpenCode uses whichever provider credentials
+you have configured with it (typically through `opencode`'s own provider setup).
 
 To seed a walkthrough with the agent conversation that produced the change, install its skill from
-the application menu (`Install Codex Skill` or `Install Claude Code Skill`), then invoke it from the
-agent:
+the application menu (`Install Codex Skill`, `Install Claude Code Skill`, or
+`Install OpenCode Tool`), then invoke it from the agent:
 
 ```text
 $codiff   # Codex
 /codiff   # Claude Code
+$codiff   # OpenCode
 ```
 
 The skill opens Codiff with `codiff -w --codex-session <id>` (or `--agent claude --claude-session
-<id>`). Codiff then generates its normal diff digest and runs the walkthrough prompt seeded with
-that session's conversation, so the walkthrough sees the original context without a lossy summary
-handoff.
+<id>`, or `--agent opencode --opencode-session <id>`). Codiff then generates its normal diff
+digest and runs the walkthrough prompt seeded with that session's conversation, so the
+walkthrough sees the original context without a lossy summary handoff.
+
+> Note: OpenCode's on-disk session format is still evolving. Until that settles, the
+> `--opencode-session` flag is accepted but the walkthrough runs without seeded session history.
 
 ## Development
 

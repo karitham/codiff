@@ -5,62 +5,16 @@ import { join } from 'node:path';
 import { expect, test } from 'vite-plus/test';
 
 const require = createRequire(import.meta.url);
-const { findClaudeSessionFile, readClaudeSessionContext, readSessionMessages } =
-  require('../claude-session-context.cjs') as {
-    findClaudeSessionFile: (root: string, sessionId: string) => string | null;
-    readClaudeSessionContext: (sessionId?: string) => {
-      messages?: ReadonlyArray<{ role: 'assistant' | 'user'; text: string }>;
-      risks?: ReadonlyArray<string>;
-      source: { threadId?: string; type: string };
-      version: 1;
-    } | null;
-    readSessionMessages: (
-      path: string,
-    ) => ReadonlyArray<{ role: 'assistant' | 'user'; text: string }>;
-  };
+const { readClaudeSessionContext } = require('../claude-session-context.cjs') as {
+  readClaudeSessionContext: (sessionId?: string) => {
+    messages?: ReadonlyArray<{ role: 'assistant' | 'user'; text: string }>;
+    risks?: ReadonlyArray<string>;
+    source: { threadId?: string; type: string };
+    version: 1;
+  } | null;
+};
 
 const sessionId = '019e5e57-e7d6-7392-9ad1-ad959319d2fb';
-
-test('extracts bounded readable messages from Claude Code session jsonl', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'codiff-claude-session-'));
-  const sessionPath = join(directory, `${sessionId}.jsonl`);
-
-  try {
-    await writeFile(
-      sessionPath,
-      [
-        JSON.stringify({
-          message: {
-            content: [{ text: 'Implement walkthrough session handoff.', type: 'text' }],
-            role: 'user',
-          },
-          type: 'user',
-        }),
-        JSON.stringify({
-          message: {
-            content: [
-              { thinking: 'planning', type: 'thinking' },
-              { text: 'Updated the CLI and skill handoff.', type: 'text' },
-            ],
-            role: 'assistant',
-          },
-          type: 'assistant',
-        }),
-        JSON.stringify({
-          message: { content: [{ text: '/codiff', type: 'text' }], role: 'user' },
-          type: 'user',
-        }),
-      ].join('\n'),
-    );
-
-    expect(readSessionMessages(sessionPath)).toEqual([
-      { role: 'user', text: 'Implement walkthrough session handoff.' },
-      { role: 'assistant', text: 'Updated the CLI and skill handoff.' },
-    ]);
-  } finally {
-    await rm(directory, { force: true, recursive: true });
-  }
-});
 
 test('finds the active Claude Code session under CLAUDE_CONFIG_DIR', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'codiff-claude-home-'));
@@ -83,7 +37,6 @@ test('finds the active Claude Code session under CLAUDE_CONFIG_DIR', async () =>
     );
     process.env.CLAUDE_CONFIG_DIR = directory;
 
-    expect(findClaudeSessionFile(join(directory, 'projects'), sessionId)).toBe(sessionPath);
     expect(readClaudeSessionContext(sessionId)).toMatchObject({
       messages: [
         {

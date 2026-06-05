@@ -203,6 +203,9 @@ const parseCommandLineArguments = (commandLine = process.argv) => {
       'codex-session': {
         type: 'string',
       },
+      'opencode-session': {
+        type: 'string',
+      },
       'walkthrough-context': {
         type: 'string',
       },
@@ -270,6 +273,7 @@ const parseCommandLineArguments = (commandLine = process.argv) => {
   const envPullRequestUrl = useEnvironment ? process.env.CODIFF_PULL_REQUEST_URL || '' : '';
   const envCodexSessionId = useEnvironment ? process.env.CODIFF_CODEX_SESSION_ID || '' : '';
   const envClaudeSessionId = useEnvironment ? process.env.CODIFF_CLAUDE_SESSION_ID || '' : '';
+  const envOpencodeSessionId = useEnvironment ? process.env.CODIFF_OPENCODE_SESSION_ID || '' : '';
   const envAgentBackend = useEnvironment ? process.env.CODIFF_AGENT_BACKEND || '' : '';
   const envWalkthroughContextPath = useEnvironment
     ? process.env.CODIFF_WALKTHROUGH_CONTEXT || ''
@@ -282,10 +286,16 @@ const parseCommandLineArguments = (commandLine = process.argv) => {
     (typeof values['claude-session'] === 'string' ? values['claude-session'] : '') ||
     envClaudeSessionId ||
     undefined;
+  const opencodeSessionId =
+    (typeof values['opencode-session'] === 'string' ? values['opencode-session'] : '') ||
+    envOpencodeSessionId ||
+    undefined;
   const rawAgentBackend =
     (typeof values.agent === 'string' ? values.agent : '') || envAgentBackend || '';
   const agentBackend =
-    rawAgentBackend === 'codex' || rawAgentBackend === 'claude' ? rawAgentBackend : undefined;
+    rawAgentBackend === 'codex' || rawAgentBackend === 'claude' || rawAgentBackend === 'opencode'
+      ? rawAgentBackend
+      : undefined;
   const walkthroughContextPath =
     (typeof values['walkthrough-context'] === 'string' ? values['walkthrough-context'] : '') ||
     envWalkthroughContextPath ||
@@ -302,6 +312,7 @@ const parseCommandLineArguments = (commandLine = process.argv) => {
       ...(agentBackend ? { agentBackend } : {}),
       ...(claudeSessionId ? { claudeSessionId } : {}),
       ...(codexSessionId ? { codexSessionId } : {}),
+      ...(opencodeSessionId ? { opencodeSessionId } : {}),
       repositoryPathProvided,
       source: sourcePullRequestUrl
         ? {

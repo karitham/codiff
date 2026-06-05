@@ -4,12 +4,11 @@ import { expect, test } from 'vite-plus/test';
 const require = createRequire(import.meta.url);
 const { AGENT_BACKENDS, DEFAULT_AGENT_BACKEND, getAgent, listAgents, normalizeAgentBackend } =
   require('../agent.cjs') as {
-    AGENT_BACKENDS: ReadonlyArray<'codex' | 'claude'>;
+    AGENT_BACKENDS: ReadonlyArray<'codex' | 'claude' | 'opencode'>;
     DEFAULT_AGENT_BACKEND: string;
     getAgent: (backendId: unknown) => {
       id: string;
       label: string;
-      modelSettingKey: string;
       sessionLaunchOptionKey: string;
       notFoundCode: string;
       run: unknown;
@@ -28,14 +27,13 @@ test('normalizes unknown agent backends to the default', () => {
 });
 
 test('lists both agent backends', () => {
-  expect(AGENT_BACKENDS).toEqual(['codex', 'claude']);
-  expect(listAgents().map((agent) => agent.id)).toEqual(['codex', 'claude']);
+  expect(AGENT_BACKENDS).toEqual(['codex', 'claude', 'opencode']);
+  expect(listAgents().map((agent) => agent.id)).toEqual(['codex', 'claude', 'opencode']);
 });
 
 test('resolves the Codex agent with its session and skill wiring', () => {
   const agent = getAgent('codex');
   expect(agent.id).toBe('codex');
-  expect(agent.modelSettingKey).toBe('openAIModel');
   expect(agent.sessionLaunchOptionKey).toBe('codexSessionId');
   expect(agent.notFoundCode).toBe('CODEX_NOT_FOUND');
   expect(agent.skill).toEqual({
@@ -51,13 +49,25 @@ test('resolves the Claude Code agent with its session and skill wiring', () => {
   const agent = getAgent('claude');
   expect(agent.id).toBe('claude');
   expect(agent.label).toBe('Claude Code');
-  expect(agent.modelSettingKey).toBe('claudeModel');
   expect(agent.sessionLaunchOptionKey).toBe('claudeSessionId');
   expect(agent.notFoundCode).toBe('CLAUDE_NOT_FOUND');
   expect(agent.skill).toEqual({
     label: 'Claude Code Skill',
     sourceSubdir: 'claude/skills/codiff',
     targetSubdir: '.claude/skills/codiff',
+  });
+});
+
+test('resolves the OpenCode agent with its session and tool wiring', () => {
+  const agent = getAgent('opencode');
+  expect(agent.id).toBe('opencode');
+  expect(agent.label).toBe('OpenCode');
+  expect(agent.sessionLaunchOptionKey).toBe('opencodeSessionId');
+  expect(agent.notFoundCode).toBe('OPENCODE_NOT_FOUND');
+  expect(agent.skill).toEqual({
+    label: 'OpenCode Tool',
+    sourceSubdir: 'opencode/tools/codiff.ts',
+    targetSubdir: '.config/opencode/tools/codiff.ts',
   });
 });
 

@@ -5,7 +5,7 @@ import { parseArgs } from 'node:util';
 
 export const flagDefinitions = [
   {
-    argument: '<codex|claude>',
+    argument: '<codex|claude|opencode>',
     description: 'Override the agent backend for this session.',
     name: 'agent',
     type: 'string',
@@ -22,6 +22,12 @@ export const flagDefinitions = [
     argument: '<id>',
     description: 'Attach Codex session metadata to a walkthrough.',
     name: 'codex-session',
+    type: 'string',
+  },
+  {
+    argument: '<id>',
+    description: 'Attach OpenCode session metadata to a walkthrough.',
+    name: 'opencode-session',
     type: 'string',
   },
   { description: 'Show this help message and exit.', name: 'help', short: 'h', type: 'boolean' },
@@ -260,7 +266,10 @@ export const parseArguments = (args) => {
     typeof values['codex-session'] === 'string' ? values['codex-session'] : null;
   const claudeSessionId =
     typeof values['claude-session'] === 'string' ? values['claude-session'] : null;
-  const agentBackend = values.agent === 'codex' || values.agent === 'claude' ? values.agent : null;
+  const opencodeSessionId =
+    typeof values['opencode-session'] === 'string' ? values['opencode-session'] : null;
+  const agentBackend =
+    values.agent === 'codex' || values.agent === 'claude' || values.agent === 'opencode' ? values.agent : null;
   let pullRequestNumber = null;
   let pullRequestUrl = null;
   let requestedPath = null;
@@ -315,6 +324,7 @@ export const parseArguments = (args) => {
     ...(agentBackend ? { agentBackend } : {}),
     ...(claudeSessionId ? { claudeSessionId } : {}),
     ...(codexSessionId ? { codexSessionId } : {}),
+    ...(opencodeSessionId ? { opencodeSessionId } : {}),
     ...(branchRef ? { branchRef } : {}),
     commitRef,
     help: values.help === true,

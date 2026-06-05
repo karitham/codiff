@@ -133,12 +133,11 @@ const createCodiffMock = (overrides: Partial<Window['codiff']> = {}): Window['co
   })),
   getPreferences: vi.fn(async () => ({
     agentBackend: 'codex' as const,
-    claudeModel: defaultSettings.claudeModel,
+    agents: defaultSettings.agents,
     copyCommentsOnClose: true,
     diffStyle: 'split' as const,
     editorCommand: '',
     lastRepositoryPath: '/repo',
-    openAIModel: defaultSettings.openAIModel,
     showOutdated: false,
     showWhitespace: false,
     theme: 'system' as const,

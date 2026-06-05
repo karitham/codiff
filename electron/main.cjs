@@ -26,8 +26,6 @@ const {
   submitPullRequestReview,
   validateRepositoryPath,
 } = require('./git-state.cjs');
-const { normalizeOpenAIModel } = require('./codex.cjs');
-const { normalizeClaudeModel } = require('./claude.cjs');
 const { getAgent, listAgents, normalizeAgentBackend } = require('./agent.cjs');
 const {
   configToPreferences,
@@ -91,7 +89,12 @@ const pendingCommentsClipboardController = createPendingCommentsClipboardControl
 /** @type {CodiffConfig} */
 let config = createDefaultConfig();
 
-/** @type {Map<'codex' | 'claude', {agent: import('./agent.cjs').Agent; installer: ReturnType<typeof createSkillInstaller>}>} */
+/**
+ * @type {Map<
+ *   'codex' | 'claude' | 'opencode',
+ *   { agent: import('./agent.cjs').Agent; installer: ReturnType<typeof createSkillInstaller> }
+ * >}
+ */
 const skillInstallers = new Map(
   listAgents().map((agent) => [
     agent.id,
@@ -105,11 +108,11 @@ const getActiveAgent = () => getAgent(config.settings.agentBackend);
 const resolveWindowAgent = (webContentsId) => {
   const override = windowLaunchOptions.get(webContentsId)?.agentBackend;
   return getAgent(
-    override === 'codex' || override === 'claude' ? override : config.settings.agentBackend,
+    override === 'codex' || override === 'claude' || override === 'opencode' ? override : config.settings.agentBackend,
   );
 };
 
-/** @param {'codex' | 'claude'} agentId */
+/** @param {'codex' | 'claude' | 'opencode'} agentId */
 const skillInstallerFor = (agentId) => skillInstallers.get(agentId)?.installer;
 const { getTerminalHelperStatus, installTerminalHelper } = createTerminalHelper({
   app,
@@ -144,12 +147,22 @@ const updateConfig = (nextConfig) => {
       agentBackend: normalizeAgentBackend(
         nextConfig.settings?.agentBackend ?? config.settings.agentBackend,
       ),
-      claudeModel: normalizeClaudeModel(
-        nextConfig.settings?.claudeModel ?? config.settings.claudeModel,
-      ),
-      openAIModel: normalizeOpenAIModel(
-        nextConfig.settings?.openAIModel ?? config.settings.openAIModel,
-      ),
+      agents: {
+        ...config.settings.agents,
+        ...nextConfig.settings?.agents,
+        codex: {
+          ...config.settings.agents.codex,
+          ...nextConfig.settings?.agents?.codex,
+        },
+        claude: {
+          ...config.settings.agents.claude,
+          ...nextConfig.settings?.agents?.claude,
+        },
+        opencode: {
+          ...config.settings.agents.opencode,
+          ...nextConfig.settings?.agents?.opencode,
+        },
+      },
     },
   };
   nativeTheme.themeSource = config.settings.theme;
@@ -158,7 +171,7 @@ const updateConfig = (nextConfig) => {
   Menu.setApplicationMenu(buildApplicationMenu());
 };
 
-/** @param {'codex' | 'claude'} backend */
+/** @param {'codex' | 'claude' | 'opencode'} backend */
 const selectAgentBackend = (backend) => {
   const agentBackend = normalizeAgentBackend(backend);
   if (config.settings.agentBackend === agentBackend) {
@@ -171,20 +184,36 @@ const selectAgentBackend = (backend) => {
 /** @param {import('./agent.cjs').Agent} agent @param {string} model */
 const selectAgentModel = (agent, model) => {
   const normalized = agent.normalizeModel(model);
-  if (config.settings[agent.modelSettingKey] === normalized) {
+  if (config.settings.agents[agent.id].model === normalized) {
     return;
   }
 
-  updateConfig({ settings: { ...config.settings, [agent.modelSettingKey]: normalized } });
+  updateConfig({
+    settings: {
+      ...config.settings,
+      agents: {
+        ...config.settings.agents,
+        [agent.id]: { ...config.settings.agents[agent.id], model: normalized },
+      },
+    },
+  });
 };
 
 /** @param {import('./agent.cjs').Agent} agent */
 const getAgentOptions = (agent) => ({
-  fallbackModel: agent.fallbackModel,
-  model: config.settings[agent.modelSettingKey],
+  fallbackModel: config.settings.agents[agent.id].fallbackModel,
+  model: config.settings.agents[agent.id].model,
   /** @param {string} fallbackModel */
   onModelFallback: async (fallbackModel) => {
-    updateConfig({ settings: { ...config.settings, [agent.modelSettingKey]: fallbackModel } });
+    updateConfig({
+      settings: {
+        ...config.settings,
+        agents: {
+          ...config.settings.agents,
+          [agent.id]: { ...config.settings.agents[agent.id], model: fallbackModel },
+        },
+      },
+    });
   },
 });
 
@@ -323,7 +352,7 @@ const buildAgentSubmenu = () =>
 const buildModelSubmenu = () => {
   const agent = getActiveAgent();
   return agent.models.map((model) => ({
-    checked: config.settings[agent.modelSettingKey] === model.id,
+    checked: config.settings.agents[agent.id].model === model.id,
     click: () => selectAgentModel(agent, model.id),
     label: model.label,
     type: 'radio',
@@ -739,10 +768,8 @@ if (squirrelStartup || !lock) {
   });
 
   app.on('ready', () => {
-    migrateFromPreferences(app.getPath('userData'), normalizeOpenAIModel);
+    migrateFromPreferences(app.getPath('userData'), getAgent('codex').normalizeModel);
     config = readConfig();
-    config.settings.openAIModel = normalizeOpenAIModel(config.settings.openAIModel);
-    config.settings.claudeModel = normalizeClaudeModel(config.settings.claudeModel);
     config.settings.agentBackend = normalizeAgentBackend(config.settings.agentBackend);
     nativeTheme.themeSource = config.settings.theme;
     Menu.setApplicationMenu(buildApplicationMenu());
@@ -758,8 +785,6 @@ if (squirrelStartup || !lock) {
         settings: {
           ...nextConfig.settings,
           agentBackend: normalizeAgentBackend(nextConfig.settings.agentBackend),
-          claudeModel: normalizeClaudeModel(nextConfig.settings.claudeModel),
-          openAIModel: normalizeOpenAIModel(nextConfig.settings.openAIModel),
         },
       };
       nativeTheme.themeSource = config.settings.theme;

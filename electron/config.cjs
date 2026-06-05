@@ -10,11 +10,17 @@ const {
 } = require('node:fs');
 const { homedir } = require('node:os');
 const { join } = require('node:path');
+const { normalizeAgentBackend } = require('./agent.cjs');
 
 /**
  * @typedef {import('../src/config/types.ts').CodiffConfig} CodiffConfig
  * @typedef {import('../src/config/types.ts').CodiffDiffStyle} CodiffDiffStyle
  * @typedef {import('../src/config/types.ts').CodiffTheme} CodiffTheme
+ *
+ * @typedef {import('../src/config/types.ts').CodiffAgentBackend} CodiffAgentBackend
+ *
+ * @typedef {import('../src/config/types.ts').CodiffAgentConfigs} CodiffAgentConfigs
+ *
  * @typedef {import('../src/types.ts').CodiffPreferences} CodiffPreferences
  */
 
@@ -113,13 +119,69 @@ const normalizeTheme = (theme) =>
 const normalizeDiffStyle = (diffStyle) =>
   diffStyle === 'split' || diffStyle === 'unified' ? diffStyle : 'split';
 
-/** @param {unknown} backend @returns {'codex' | 'claude'} */
-const normalizeAgentBackend = (backend) =>
-  backend === 'codex' || backend === 'claude' ? backend : 'codex';
-
 /** @param {unknown} path */
 const normalizeLastRepositoryPath = (path) =>
   typeof path === 'string' && path.length > 0 ? path : '';
+
+/**
+ * Normalize a single agent's config, merging with defaults.
+ *
+ * @param {unknown} raw
+ * @param {import('../src/config/types.ts').CodexAgentConfig
+ *   | import('../src/config/types.ts').ClaudeAgentConfig
+ *   | import('../src/config/types.ts').OpenCodeAgentConfig} defaults
+ * @returns {import('../src/config/types.ts').CodexAgentConfig
+ *   | import('../src/config/types.ts').ClaudeAgentConfig
+ *   | import('../src/config/types.ts').OpenCodeAgentConfig}
+ */
+const normalizeAgentConfig = (raw, defaults) => {
+  if (typeof raw !== 'object' || raw === null) {
+    return { ...defaults };
+  }
+
+  const obj = /** @type {Record<string, unknown>} */ (raw);
+  return {
+    fallbackModel: typeof obj.fallbackModel === 'string' ? obj.fallbackModel : defaults.fallbackModel,
+    model: typeof obj.model === 'string' ? obj.model : defaults.model,
+  };
+};
+
+/**
+ * Merge agent configs from raw settings, with backward compatibility for old flat keys. Old keys (openAIModel,
+ * claudeModel, opencodeModel) are migrated into the agents map.
+ *
+ * @param {Record<string, unknown>} rawSettings
+ * @returns {CodiffAgentConfigs}
+ */
+const mergeAgentConfigs = (rawSettings) => {
+  const defaults = createDefaultConfig();
+  const rawAgents =
+    typeof rawSettings.agents === 'object' && rawSettings.agents !== null
+      ? /** @type {Record<string, unknown>} */ (rawSettings.agents)
+      : {};
+
+  // Start with defaults, then overlay new agents map, then migrate old flat keys
+  const codexConfig = normalizeAgentConfig(rawAgents.codex, defaults.settings.agents.codex);
+  const claudeConfig = normalizeAgentConfig(rawAgents.claude, defaults.settings.agents.claude);
+  const opencodeConfig = normalizeAgentConfig(rawAgents.opencode, defaults.settings.agents.opencode);
+
+  // Backward compatibility: migrate old flat keys if present and no agents map was provided
+  if (typeof rawSettings.openAIModel === 'string' && !rawAgents.codex) {
+    codexConfig.model = rawSettings.openAIModel;
+  }
+  if (typeof rawSettings.claudeModel === 'string' && !rawAgents.claude) {
+    claudeConfig.model = rawSettings.claudeModel;
+  }
+  if (typeof rawSettings.opencodeModel === 'string' && !rawAgents.opencode) {
+    opencodeConfig.model = rawSettings.opencodeModel;
+  }
+
+  return {
+    claude: claudeConfig,
+    codex: codexConfig,
+    opencode: opencodeConfig,
+  };
+};
 
 /**
  * Accept a single combo string or a non-empty list of combo strings.
@@ -216,10 +278,7 @@ const mergeConfig = (raw) => {
     },
     settings: {
       agentBackend: normalizeAgentBackend(rawSettings.agentBackend),
-      claudeModel:
-        typeof rawSettings.claudeModel === 'string'
-          ? rawSettings.claudeModel
-          : defaults.settings.claudeModel,
+      agents: mergeAgentConfigs(rawSettings),
       copyCommentsOnClose:
         typeof rawSettings.copyCommentsOnClose === 'boolean'
           ? rawSettings.copyCommentsOnClose
@@ -230,10 +289,6 @@ const mergeConfig = (raw) => {
           ? rawSettings.editorCommand
           : defaults.settings.editorCommand,
       lastRepositoryPath: normalizeLastRepositoryPath(rawSettings.lastRepositoryPath),
-      openAIModel:
-        typeof rawSettings.openAIModel === 'string'
-          ? rawSettings.openAIModel
-          : defaults.settings.openAIModel,
       showOutdated:
         typeof rawSettings.showOutdated === 'boolean'
           ? rawSettings.showOutdated
@@ -333,7 +388,8 @@ const migrateFromPreferences = (userDataPath, normalizeOpenAIModel) => {
       settings: {
         ...oldPrefs,
         lastRepositoryPath: normalizeLastRepositoryPath(oldPrefs?.lastRepositoryPath),
-        openAIModel: normalizeOpenAIModel(oldPrefs?.openAIModel ?? defaults.settings.openAIModel),
+        // Migrate old openAIModel to agents.codex.model
+        openAIModel: normalizeOpenAIModel(oldPrefs?.openAIModel ?? defaults.settings.agents.codex.model),
         theme: normalizeTheme(oldPrefs?.theme),
       },
     });

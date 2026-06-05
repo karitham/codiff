@@ -1,7 +1,7 @@
 // @ts-check
 
 const { readFileSync } = require('node:fs');
-const { cleanText, truncate } = require('./codex.cjs');
+const { cleanText, truncate } = require('./agent-shared.cjs');
 
 const MAX_CONTEXT_FILE_CHARS = 32_000;
 const MAX_TEXT_CHARS = 1_800;

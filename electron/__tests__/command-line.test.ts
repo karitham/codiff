@@ -259,6 +259,31 @@ test('parses Codex session ids without creating walkthrough context', () => {
   });
 });
 
+test('parses OpenCode session ids and the opencode agent override', () => {
+  expect(
+    parseCommandLineArguments([
+      'codiff',
+      '--walkthrough',
+      '--agent',
+      'opencode',
+      '--opencode-session',
+      'opencode-go/abc123',
+      '/repo',
+    ]).launchOptions,
+  ).toEqual({
+    agentBackend: 'opencode',
+    opencodeSessionId: 'opencode-go/abc123',
+    repositoryPathProvided: true,
+    walkthrough: true,
+  });
+});
+
+test('ignores unknown agent backend values', () => {
+  expect(parseCommandLineArguments(['codiff', '--agent', 'gpt', '/repo']).launchOptions).not.toHaveProperty(
+    'agentBackend',
+  );
+});
+
 test('parses pull request markers without resolving the repository remote', () => {
   expect(parseCommandLineArguments(['codiff', 'pr', '12', '/repo'])).toMatchObject({
     launchOptions: {

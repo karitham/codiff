@@ -16,14 +16,67 @@
       "properties": {
         "agentBackend": {
           "type": "string",
-          "enum": ["codex", "claude"],
+          "enum": ["codex", "claude", "opencode"],
           "default": "codex",
-          "description": "Which agent CLI powers review assistance and walkthroughs. 'codex' uses the OpenAI Codex CLI; 'claude' uses the Claude Code CLI."
+          "description": "Which agent CLI powers review assistance and walkthroughs. 'codex' uses the OpenAI Codex CLI; 'claude' uses the Claude Code CLI; 'opencode' uses the OpenCode CLI."
         },
-        "claudeModel": {
-          "type": "string",
-          "default": "claude-sonnet-4-6",
-          "description": "The Claude Code model to use for review assistance and walkthroughs when agentBackend is 'claude'."
+        "agents": {
+          "type": "object",
+          "description": "Per-backend configuration. Each key matches an agentBackend id.",
+          "additionalProperties": false,
+          "properties": {
+            "claude": {
+              "type": "object",
+              "description": "Claude Code backend configuration.",
+              "additionalProperties": false,
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "default": "claude-sonnet-4-6",
+                  "description": "The Claude Code model to use for review assistance and walkthroughs."
+                },
+                "fallbackModel": {
+                  "type": "string",
+                  "default": "claude-haiku-4-5",
+                  "description": "Fallback model used when the primary model is unavailable."
+                }
+              }
+            },
+            "codex": {
+              "type": "object",
+              "description": "Codex backend configuration.",
+              "additionalProperties": false,
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "default": "gpt-5.3-codex-spark",
+                  "description": "The OpenAI model to use for review assistance and walkthroughs."
+                },
+                "fallbackModel": {
+                  "type": "string",
+                  "default": "gpt-5.3-codex",
+                  "description": "Fallback model used when the primary model is unavailable."
+                }
+              }
+            },
+            "opencode": {
+              "type": "object",
+              "description": "OpenCode backend configuration.",
+              "additionalProperties": false,
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "default": "opencode-go/deepseek-v4-flash",
+                  "description": "The model identifier passed to `opencode run --model`. Defaults to 'opencode-go/deepseek-v4-flash'; override with any 'provider/model' string that matches your OpenCode provider configuration."
+                },
+                "fallbackModel": {
+                  "type": "string",
+                  "default": "default",
+                  "description": "Fallback model used when the primary model is unavailable."
+                }
+              }
+            }
+          }
         },
         "copyCommentsOnClose": {
           "type": "boolean",
@@ -45,11 +98,6 @@
           "type": "string",
           "default": "",
           "description": "The last repository opened by Codiff when no path was explicitly provided."
-        },
-        "openAIModel": {
-          "type": "string",
-          "default": "gpt-5.3-codex-spark",
-          "description": "The OpenAI model to use for review assistance and walkthroughs."
         },
         "showOutdated": {
           "type": "boolean",

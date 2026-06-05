@@ -205,6 +205,14 @@ test('parseArguments recognizes Claude walkthrough seed options and the agent ov
   });
 });
 
+test('parseArguments recognizes OpenCode walkthrough seed options and the agent override', () => {
+  expect(parseArguments(['-w', '--agent', 'opencode', '--opencode-session', 'opencode-go/abc123'])).toMatchObject({
+    agentBackend: 'opencode',
+    opencodeSessionId: 'opencode-go/abc123',
+    walkthrough: true,
+  });
+});
+
 test('parseArguments ignores unknown agent backends', () => {
   const result = parseArguments(['--agent', 'gpt']) as { agentBackend?: string };
   expect(result.agentBackend).toBeUndefined();
@@ -720,6 +728,8 @@ test('formatHelpText includes version and all flags', () => {
   expect(text).toContain('--version');
   expect(text).toContain('--commit');
   expect(text).toContain('--codex-session');
+  expect(text).toContain('--claude-session');
+  expect(text).toContain('--opencode-session');
   expect(text).toContain('--walkthrough');
   expect(text).toContain('--walkthrough-context');
   expect(text).toContain('-h');

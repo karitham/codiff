@@ -82,7 +82,9 @@ const createSkillInstaller = ({ app, dialog, root, skill }) => {
         unlinkSync(targetPath);
       }
 
-      symlinkSync(sourcePath, targetPath, process.platform === 'win32' ? 'junction' : 'dir');
+      const sourceStat = lstatSync(sourcePath);
+      const symlinkType = sourceStat.isFile() ? 'file' : process.platform === 'win32' ? 'junction' : 'dir';
+      symlinkSync(sourcePath, targetPath, symlinkType);
 
       /** @type {import('electron').MessageBoxOptions} */
       const successMessage = {

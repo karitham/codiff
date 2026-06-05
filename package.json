@@ -20,7 +20,8 @@
     "config",
     "codex",
     "dist",
-    "electron"
+    "electron",
+    "opencode"
   ],
   "type": "module",
   "main": "./electron/main.cjs",
