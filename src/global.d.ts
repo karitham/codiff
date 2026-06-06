@@ -42,7 +42,7 @@ declare global {
       onFindInDiffs: (callback: () => void) => () => void;
       onRepositoryChanged: (callback: (change: { root: string }) => void) => () => void;
       openConfigFile: () => Promise<void>;
-      openFile: (path: string) => Promise<void>;
+      openFile: (path: string, line?: number) => Promise<void>;
       setDiffStyle: (value: CodiffPreferences['diffStyle']) => Promise<void>;
       setShowOutdated: (value: boolean) => Promise<void>;
       setWordWrap: (value: boolean) => Promise<void>;

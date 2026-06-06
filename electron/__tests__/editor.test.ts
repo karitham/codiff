@@ -13,6 +13,7 @@ const { createEditorOpener } = require('../main/editor.cjs') as {
     getEditorCommands: (
       absolutePath: string,
       context?: {
+        line?: number;
         repoPath?: string;
       },
     ) => Array<{
@@ -115,4 +116,30 @@ test('lets CODIFF_EDITOR override the configured editor command', () => {
       process.env.CODIFF_EDITOR = previous;
     }
   }
+});
+
+test('replaces the line placeholder with the provided line number', () => {
+  const opener = createOpener({
+    getEditorCommand: () => 'code -g "{file}:{line}"',
+  });
+
+  expect(
+    opener.getEditorCommands('/Users/test/project/file.ts', { line: 42 })[0],
+  ).toEqual({
+    args: ['-g', '/Users/test/project/file.ts:42'],
+    command: 'code',
+  });
+});
+
+test('defaults the line placeholder to 1 when no line is provided', () => {
+  const opener = createOpener({
+    getEditorCommand: () => 'hx "{file}:{line}"',
+  });
+
+  expect(
+    opener.getEditorCommands('/Users/test/project/file.ts')[0],
+  ).toEqual({
+    args: ['/Users/test/project/file.ts:1'],
+    command: 'hx',
+  });
 });

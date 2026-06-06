@@ -56,7 +56,7 @@ const codiff = {
     return () => ipcRenderer.removeListener('codiff:repositoryChanged', listener);
   },
   openConfigFile: () => ipcRenderer.invoke('codiff:openConfigFile'),
-  openFile: (path) => ipcRenderer.invoke('codiff:openFile', path),
+  openFile: (path, line) => ipcRenderer.invoke('codiff:openFile', path, line),
   setDiffStyle: (value) => ipcRenderer.invoke('codiff:setDiffStyle', value),
   setShowOutdated: (value) => ipcRenderer.invoke('codiff:setShowOutdated', value),
   setWordWrap: (value) => ipcRenderer.invoke('codiff:setWordWrap', value),

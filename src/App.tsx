@@ -821,13 +821,13 @@ export default function App() {
     writeSidebarCollapsed(false);
   }, []);
 
-  const openFile = useCallback((file: ChangedFile) => {
+  const openFile = useCallback((file: ChangedFile, line?: number) => {
     // Deleted files are still shown in diffs, but there is no current file to open.
     if (file.status === 'deleted') {
       return;
     }
 
-    void window.codiff.openFile(file.path).catch(() => {});
+    void window.codiff.openFile(file.path, line).catch(() => {});
   }, []);
 
   const openSelectedFile = useCallback(() => {

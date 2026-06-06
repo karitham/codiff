@@ -409,7 +409,7 @@ test('Mod+K opens the selected file in the editor', async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(app.openFile).toHaveBeenCalledWith(changedFile.path);
+    expect(app.openFile).toHaveBeenCalledWith(changedFile.path, undefined);
   } finally {
     await app.cleanup();
   }

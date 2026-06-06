@@ -147,7 +147,7 @@ function CodeViewHeader({
   isSectionLoading: boolean;
   meta: CodeViewItemMetadata;
   onLoadSection: (file: ChangedFile, section: DiffSection) => void;
-  onOpenFile: (file: ChangedFile) => void;
+  onOpenFile: (file: ChangedFile, line?: number) => void;
   onToggleCollapsed: (file: ChangedFile, isCollapsed: boolean) => void;
   onToggleMarkdownPreview: (section: DiffSection) => void;
   onToggleViewed: (file: ChangedFile, isViewed: boolean) => void;
@@ -972,6 +972,34 @@ const getHunkSelectionRange = (
 const isSameSelection = (a: SelectedLineRange, b: SelectedLineRange) =>
   a.start === b.start && a.end === b.end && a.side === b.side;
 
+/**
+ * Returns the line number to open in an editor for a given diff item.
+ * Prefers the currently navigated hunk's line; falls back to the first
+ * changed line in the file (the first hunk's additions or deletions).
+ */
+const getFileOpenLine = (
+  item: CodeViewItem<ReviewAnnotationMetadata>,
+  navigatedSelection: CodeViewLineSelection | null,
+): number | undefined => {
+  // If a hunk was explicitly navigated to, open at that line.
+  if (navigatedSelection?.id === item.id && navigatedSelection.range) {
+    return navigatedSelection.range.start;
+  }
+
+  // Otherwise find the first changed line.
+  if (item.type !== 'diff' || item.fileDiff.hunks.length === 0) {
+    return;
+  }
+
+  const firstHunk = item.fileDiff.hunks[0];
+  const selection = getHunkSelectionRange(firstHunk);
+  if (selection) {
+    return selection.start;
+  }
+  const side = firstHunk.additionLines > 0 ? 'additions' : 'deletions';
+  return side === 'additions' ? firstHunk.additionStart : firstHunk.deletionStart;
+};
+
 export function ReviewCodeView({
   activeSearchMatch,
   agentId,
@@ -1030,7 +1058,7 @@ export function ReviewCodeView({
   onCreateComment: (comment: Omit<ReviewComment, 'body' | 'id'>) => void;
   onDeleteComment: (commentId: string) => void;
   onLoadSection: (file: ChangedFile, section: DiffSection) => void;
-  onOpenFile: (file: ChangedFile) => void;
+  onOpenFile: (file: ChangedFile, line?: number) => void;
   onSelectPathFromScroll: (viewer: CodeViewInstance) => void;
   onSubmitComment: (commentId: string) => void;
   onToggleCollapsed: (file: ChangedFile, isCollapsed: boolean) => void;
@@ -1998,12 +2026,13 @@ export function ReviewCodeView({
       }
 
       const meta = itemMetadata.get(item.id);
+      const fileLine = getFileOpenLine(item, navigatedSelectionRef.current);
       return meta ? (
         <CodeViewHeader
           isSectionLoading={loadingSectionIds.has(meta.section.id)}
           meta={meta}
           onLoadSection={onLoadSection}
-          onOpenFile={onOpenFile}
+          onOpenFile={(file) => onOpenFile(file, fileLine)}
           onToggleCollapsed={onToggleCollapsed}
           onToggleMarkdownPreview={toggleMarkdownPreview}
           onToggleViewed={onToggleViewed}

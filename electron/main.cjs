@@ -960,14 +960,14 @@ ipcMain.handle('codiff:setWordWrap', (_event, value) => {
 
 ipcMain.handle('codiff:openConfigFile', () => openConfigFile());
 
-ipcMain.handle('codiff:openFile', async (event, filePath) => {
+ipcMain.handle('codiff:openFile', async (event, filePath, line) => {
   const repositoryPath = windowRepositories.get(event.sender.id) || getLaunchPath();
   const state = await readRepositoryState(repositoryPath);
   const repositoryFilePath = validateRepositoryPath(filePath);
   const absolutePath = resolve(state.root, repositoryFilePath);
 
   if (existsSync(absolutePath)) {
-    await openFileInEditor(absolutePath, { repoPath: state.root });
+    await openFileInEditor(absolutePath, { line, repoPath: state.root });
   } else {
     await shell.openPath(state.root);
   }
